@@ -16,7 +16,7 @@ def chooseflag(info, sqlserver):
     '''
     sql = 'select * from time '
     response = sqlserver.ExecQuery(sql)
-    return str(response[0][0])
+    return str(response[0][1])
 
 
 def stu_login(info, sqlserver):
@@ -345,6 +345,172 @@ def get_teachecourse(info, sqlserver):
     return str(jsonData)
 
 
+def change_score(info, sqlserver):
+    '''
+    教务处修改学生成绩
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    course_id = "'" + info[1] + "'"
+    stu_id = "'" + info[0] + "'"
+    grade = float(info[2])
+    sql = "select * from student_course WHERE student_id=%s and course_id = %s" % (stu_id, course_id)
+    response = sqlserver.ExecQuery(sql)
+    if len(response) == 0:
+        return '1'
+    else:
+        sql = "UPDATE student_course SET sc_result = %f WHERE student_id=%s and course_id = %s" % (
+            grade, stu_id, course_id)
+        sqlserver.ExecNonQuery(sql)
+        return "修改成功！"
+
+
+def flag(info, sqlserver):
+    '''
+    选课控制
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    flag = int(info[0])
+    sql = "UPDATE time SET time = %d WHERE time_id=1" % flag
+    sqlserver.ExecNonQuery(sql)
+    return "录入成功！"
+
+
+def del_course(info, sqlserver):
+    '''
+    教务处删除课程
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    course_id = "'" + info[0] + "'"
+    sql = "select * from course WHERE course_id=%s " % course_id
+    response = sqlserver.ExecQuery(sql)
+    if len(response) == 0:
+        return '1'
+    else:
+        sql = "DELETE FROM course WHERE course_id = %s " % course_id
+        sqlserver.ExecNonQuery(sql)
+        return '删除成功！'
+
+
+def get_course(info, sqlserver):
+    '''
+    得到要修改的课程信息
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    course_id = "'" + info[0] + "'"
+    sql = "select * from course WHERE course_id=%s " % course_id
+    response = sqlserver.ExecQuery(sql)
+    print(response)
+    if len(response) == 0:
+        return '1'
+    else:
+        jsonData = []
+        data = {}
+        data['ID'] = str(response[0][0])
+        data['Teacher_ID'] = str(response[0][1])
+        data['Course_name'] = str(response[0][2])
+        data['Grade'] = str(response[0][3])
+        data['Course_Credit'] = str(response[0][5])
+        data['Course_Place'] = str(response[0][6])
+        data['Course_capacity'] = str(response[0][7])
+        data['Course_restcapacity'] = str(response[0][8])
+        data['Course_Time'] = str(response[0][10])
+        jsonData.append(data)
+        jsondatar = json.dumps(jsonData, ensure_ascii=False)
+        print(jsondatar)
+        return jsondatar[1:len(jsondatar) - 1]
+
+
+def change(info, sqlserver):
+    '''
+    修改课程信息
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    course_id = "'" + info[0] + "'"
+    tea_id = "'" + info[1] + "'"
+    c_name = "'" + info[2] + "'"
+    grade = int(info[3])
+    credit = int(info[4])
+    place = "'" + info[5] + "'"
+    cap = int(info[6])
+    time = "'" + info[7] + "'"
+    sql = "select * from teacher WHERE teacher_id = %s" % tea_id
+    response = sqlserver.ExecQuery(sql)
+    if len(response) == 0:
+        return '1'
+    else:
+        sql = "UPDATE course SET teacher_id=%s,course_name=%s,course_grade=%d," \
+              "course_credit=%d,course_place=%s,course_capacity=%d,course_restcapacity=%d," \
+              "course_time=%s WHERE  course_id = %s" % (tea_id, c_name, grade, credit, place, cap, cap, time, course_id)
+        sqlserver.ExecNonQuery(sql)
+        return "修改成功！"
+
+
+def add(info, sqlserver):
+    '''
+    添加课程
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    course_id = "'" + info[0] + "'"
+    tea_id = "'" + info[1] + "'"
+    c_name = "'" + info[2] + "'"
+    grade = int(info[3])
+    credit = int(info[4])
+    place = "'" + info[5] + "'"
+    cap = int(info[6])
+    time = "'" + info[7] + "'"
+    url = "'" + info[8] + "'"
+    sql = "select * from teacher WHERE teacher_id = %s" % tea_id
+    response = sqlserver.ExecQuery(sql)
+    if len(response) == 0:
+        return '1'
+    else:
+        sql = "select * from course WHERE course_id = %s" % course_id
+        response = sqlserver.ExecQuery(sql)
+        if len(response) != 0:
+            return '2'
+        else:
+            sql = "insert into course (course_id, teacher_id,course_name,course_grade," \
+                  "course_nature,course_credit,course_place,course_capacity,course_restcapacity," \
+                  "course_photo,course_time) values (%s,%s,%s,%d,%d,%d,%s,%d,%d,%s,%s) " % (
+                  course_id, tea_id, c_name, grade, 1, credit, place, cap, cap, url, time)
+            print(sql)
+            sqlserver.ExecNonQuery(sql)
+            return "添加成功！"
+
+
+def chang_pass(info, sqlserver):
+    '''
+    教务处改密码
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    off_id = "'" + info[0] + "'"
+    password = "'" + info[1] + "'"
+    sql = "UPDATE office SET office_password = %s WHERE office_id = %s" % (password, off_id)
+    sqlserver.ExecNonQuery(sql)
+    return '修改成功！'
+
+
 if __name__ == '__main__':
     sqlserver = SQLServer('(local)', 'sa', '874795069syc', 'Student')
     # 1 定义域名和端口号
@@ -411,6 +577,27 @@ if __name__ == '__main__':
             elif command == 'get_teachecourse':
                 info = data[data.find(':') + 1:]
                 result = get_teachecourse(info, sqlserver)
+            elif command == 'change_score':
+                info = data[data.find(':') + 1:]
+                result = change_score(info, sqlserver)
+            elif command == 'flag':
+                info = data[data.find(':') + 1:]
+                result = flag(info, sqlserver)
+            elif command == 'del_course':
+                info = data[data.find(':') + 1:]
+                result = del_course(info, sqlserver)
+            elif command == 'get_course':
+                info = data[data.find(':') + 1:]
+                result = get_course(info, sqlserver)
+            elif command == 'change':
+                info = data[data.find(':') + 1:]
+                result = change(info, sqlserver)
+            elif command == 'add':
+                info = data[data.find(':') + 1:]
+                result = add(info, sqlserver)
+            elif command == 'chang_pass':
+                info = data[data.find(':') + 1:]
+                result = chang_pass(info, sqlserver)
             # 6.4 发送时间还有信息
             tcpCilentSocket.send(result.encode())
         # 7 关闭资源
