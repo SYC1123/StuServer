@@ -50,7 +50,7 @@ def stu_login(info, sqlserver):
             sql = 'select major_name from major where major_id=%s ' % (str(response[0][7]))
             xx = sqlserver.ExecQuery(sql)
             data['major_name'] = str(xx[0][0])
-            data['major_id']=str(response[0][7])
+            data['major_id'] = str(response[0][7])
             jsonData.append(data)
             jsondatar = json.dumps(jsonData, ensure_ascii=False)
             print(jsondatar)
@@ -121,6 +121,7 @@ def tea_login(info, sqlserver):
             data['Tel'] = str(response[0][4])
             data['Sex'] = str(response[0][5])
             data['College'] = str(response[0][6])
+            data['major_id'] = str(response[0][1])
             jsonData.append(data)
             jsondatar = json.dumps(jsonData, ensure_ascii=False)
             print(jsondatar)
@@ -200,12 +201,15 @@ def query_course(info, sqlserver):
     :return:
     '''
     info = info.split("&")
-    grade =  int(info[0])
-    major_id = "'"+(info[1])+"'"
-    sql = "select course.course_name,course.course_photo,course.course_credit,course.course_id,course.course_place" \
-          ",course.course_capacity,course.course_restcapacity,course.course_time,teacher_name from course,major_course," \
-          "teacher where course.course_id=major_course.course_id and course.teacher_id=teacher.teacher_id " \
-          "and course.course_grade=%d and major_course.major_id=%s" % (grade,major_id)
+    grade = int(info[0])
+    major_id = "'" + (info[1]) + "'"
+    sql = "select course.course_name,course.course_photo,course.course_credit," \
+          "course.course_id,course.course_place,course.course_capacity," \
+          "course.course_restcapacity,course.course_time,teacher_name from " \
+          "course,major_course,teacher where course.course_id=major_course.course_id " \
+          "and course.teacher_id=teacher.teacher_id and course.course_grade=%d and " \
+          "major_course.major_id=%s and course.course_id not in (select course_id from student_course)" % (
+              grade, major_id)
     response = sqlserver.ExecQuery(sql)
     print(response)
     jsonData = []
@@ -224,6 +228,122 @@ def query_course(info, sqlserver):
         jsondatar = json.dumps(jsonData, ensure_ascii=False)
     print(str(jsonData))
     return str(jsonData)
+
+
+def choose_course(info, sqlserver):
+    '''
+    选课
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    course_id = "'" + info[0] + "'"
+    stu_id = "'" + info[1] + "'"
+    grade = int(info[2]) + 1
+    num = int(info[3]) - 1
+    sql = "UPDATE course SET course_restcapacity = %d WHERE course_id = %s" % (num, course_id)
+    sqlserver.ExecNonQuery(sql)
+    sql = '''insert into student_course(student_id,course_id,sc_grade) values (%s,%s,%d)''' % (stu_id, course_id, grade)
+    print(sql)
+    sqlserver.ExecNonQuery(sql)
+    return "选课成功！"
+
+
+def get_teacourse(info, sqlserver):
+    '''
+    查看教师授课
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    tea_id = "'" + (info[0]) + "'"
+    sql = "select * from course where Teacher_ID=%s" % (tea_id)
+    response = sqlserver.ExecQuery(sql)
+    print(response)
+    jsonData = []
+    for row in response:
+        data = {}
+        data['Course_ID'] = str(row[0])
+        data['Course_name'] = str(row[2])
+        data['Course_Credit'] = row[5]
+        jsonData.append(data)
+        jsondatar = json.dumps(jsonData, ensure_ascii=False)
+    print(str(jsonData))
+    return str(jsonData)
+
+
+def get_teastu(info, sqlserver):
+    '''
+    查询选该课的学生
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    course_id = "'" + (info[0]) + "'"
+    sql = "select * from student_course where course_id=%s and  SC_Result is null" % course_id
+    response = sqlserver.ExecQuery(sql)
+    print(response)
+    jsonData = []
+    for row in response:
+        data = {}
+        data['Stu_ID'] = str(row[0])
+        data['Course_ID'] = str(row[1])
+        sql = 'select student_name from student where student_id=%s ' % (str(row[0]))
+        xx = sqlserver.ExecQuery(sql)
+        data['Stu_Name'] = str(xx[0][0])
+        jsonData.append(data)
+        jsondatar = json.dumps(jsonData, ensure_ascii=False)
+    print(str(jsonData))
+    return str(jsonData)
+
+
+def input_score(info, sqlserver):
+    '''
+    输入成绩
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    course_id = "'" + info[1] + "'"
+    stu_id = "'" + info[0] + "'"
+    grade = float(info[2])
+    sql = "UPDATE student_course SET sc_result = %f WHERE student_id=%s and course_id = %s" % (grade, stu_id, course_id)
+    sqlserver.ExecNonQuery(sql)
+    return "录入成功！"
+
+
+def get_teachecourse(info, sqlserver):
+    '''
+    查看教师授课
+    :param info:
+    :param sqlserver:
+    :return:
+    '''
+    info = info.split("&")
+    tea_id = "'" + (info[0]) + "'"
+    sql = "select * from course where teacher_id=%s" % tea_id
+    response = sqlserver.ExecQuery(sql)
+    print(response)
+    jsonData = []
+    for row in response:
+        data = {}
+        data['Course_name'] = str(row[2])
+        data['Course_Photo'] = str(row[9])
+        data['Course_Credit'] = row[5]
+        data['Course_ID'] = str(row[0])
+        data['Course_Place'] = str(row[6])
+        data['Course_capacity'] = row[7]
+        data['Course_restcapacity'] = row[8]
+        data['Course_Time'] = str(row[10])
+        jsonData.append(data)
+        jsondatar = json.dumps(jsonData, ensure_ascii=False)
+    print(str(jsonData))
+    return str(jsonData)
+
 
 if __name__ == '__main__':
     sqlserver = SQLServer('(local)', 'sa', '874795069syc', 'Student')
@@ -274,6 +394,23 @@ if __name__ == '__main__':
             elif command == 'query_course':
                 info = data[data.find(':') + 1:]
                 result = query_course(info, sqlserver)
+            elif command == 'check':
+                result = chooseflag("", sqlserver)
+            elif command == 'choose_course':
+                info = data[data.find(':') + 1:]
+                result = choose_course(info, sqlserver)
+            elif command == 'get_teacourse':
+                info = data[data.find(':') + 1:]
+                result = get_teacourse(info, sqlserver)
+            elif command == 'get_teastu':
+                info = data[data.find(':') + 1:]
+                result = get_teastu(info, sqlserver)
+            elif command == 'input_score':
+                info = data[data.find(':') + 1:]
+                result = input_score(info, sqlserver)
+            elif command == 'get_teachecourse':
+                info = data[data.find(':') + 1:]
+                result = get_teachecourse(info, sqlserver)
             # 6.4 发送时间还有信息
             tcpCilentSocket.send(result.encode())
         # 7 关闭资源
